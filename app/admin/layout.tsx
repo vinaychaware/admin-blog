@@ -34,7 +34,7 @@ import {
   User,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const navigation = [
   {
@@ -94,6 +94,13 @@ export default function AdminLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+const handleLogout = async () => {
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  
+    router.push('/login');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -242,8 +249,9 @@ export default function AdminLayout({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <Button onClick={handleLogout} className="mt-4 bg-red-600 text-white px-4 py-2 rounded">
+        Logout
+      </Button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
