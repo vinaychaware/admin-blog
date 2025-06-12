@@ -32,6 +32,7 @@ import {
   Upload,
   LogOut,
   User,
+  Edit,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -47,6 +48,12 @@ const navigation = [
     name: 'Blog Posts',
     href: '/admin/posts',
     icon: FileText,
+    current: false,
+  },
+  {
+    name: 'Write',
+    href: '/admin/write',
+    icon: Edit,
     current: false,
   },
   // {
@@ -80,6 +87,12 @@ const navigation = [
     current: false,
   },
   {
+    name: 'Profile',
+    href: '/admin/profile',
+    icon: User,
+    current: false,
+  },
+  {
     name: 'Settings',
     href: '/admin/settings',
     icon: Settings,
@@ -100,7 +113,7 @@ const handleLogout = async () => {
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   
     router.push('/login');
-  };
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -239,19 +252,22 @@ const handleLogout = async () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Button onClick={handleLogout} className="mt-4 bg-red-600 text-white px-4 py-2 rounded">
-        Logout
-      </Button>
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
