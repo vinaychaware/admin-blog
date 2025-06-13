@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +15,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   LayoutDashboard,
   FileText,
@@ -33,6 +40,9 @@ import {
   LogOut,
   User,
   Edit,
+  CheckCircle,
+  AlertCircle,
+  Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -50,37 +60,18 @@ const navigation = [
     icon: FileText,
     current: false,
   },
-  
-{
-  name: 'Write',
-  href: '/admin/write',
-  icon: Edit,
-  current: false,
-},
-// {
-//   name: 'Analytics',
-//   href: '/admin/analytics',
-//   icon: BarChart3,
-//   current: false,
-// },
+  {
+    name: 'Write',
+    href: '/admin/write',
+    icon: Edit,
+    current: false,
+  },
   {
     name: 'Users',
     href: '/admin/users',
     icon: Users,
     current: false,
   },
-  // {
-  //   name: 'Edit',
-  //   href: '/admin/categories',
-  //   icon: Edit,
-  //   current: false,
-  // },
-  // {
-  //   name: 'Media',
-  //   href: '/admin/media',
-  //   icon: Image,
-  //   current: false,
-  // },
   {
     name: 'Comments',
     href: '/admin/comments',
@@ -101,19 +92,97 @@ const navigation = [
   },
 ];
 
+// Mock notifications data
+const mockNotifications = [
+  {
+    id: 1,
+    title: 'New Comment',
+    message: 'Alice Johnson commented on "Building Modern Web Applications"',
+    time: '2 minutes ago',
+    type: 'comment',
+    read: false,
+  },
+  {
+    id: 2,
+    title: 'Post Published',
+    message: 'Your post "The Future of AI" has been published successfully',
+    time: '1 hour ago',
+    type: 'success',
+    read: false,
+  },
+  {
+    id: 3,
+    title: 'New User Registration',
+    message: 'John Smith has registered as a new user',
+    time: '3 hours ago',
+    type: 'user',
+    read: true,
+  },
+  {
+    id: 4,
+    title: 'System Update',
+    message: 'Blog system has been updated to version 2.1.0',
+    time: '1 day ago',
+    type: 'system',
+    read: true,
+  },
+];
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState(mockNotifications);
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
   const router = useRouter();
 
-const handleLogout = async () => {
+  useEffect(() => {
+    // Load user data from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = async () => {
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  
+    localStorage.removeItem('user');
     router.push('/login');
+  };
+
+  const markNotificationAsRead = (id: number) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, read: true }))
+    );
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'comment':
+        return <MessageSquare className="h-4 w-4 text-blue-500" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'user':
+        return <User className="h-4 w-4 text-purple-500" />;
+      case 'system':
+        return <Settings className="h-4 w-4 text-orange-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
   };
 
   return (
@@ -227,9 +296,18 @@ const handleLogout = async () => {
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <ThemeToggle />
               
-              <Button variant="ghost" size="sm" className="relative">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="relative"
+                onClick={() => setNotificationsOpen(true)}
+              >
                 <Bell className="h-5 w-5" />
-                <Badge className="absolute -right-1 -top-1 h-4 w-4 p-0 text-xs">3</Badge>
+                {unreadCount > 0 && (
+                  <Badge className="absolute -right-1 -top-1 h-5 w-5 p-0 text-xs flex items-center justify-center">
+                    {unreadCount}
+                  </Badge>
+                )}
               </Button>
 
               <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-border" />
@@ -239,16 +317,20 @@ const handleLogout = async () => {
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/avatars/01.png" alt="Admin" />
-                      <AvatarFallback>AD</AvatarFallback>
+                      <AvatarFallback>
+                        {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'AD'}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">Admin User</p>
+                      <p className="text-sm font-medium leading-none">
+                        {user?.name || 'Admin User'}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        admin@blogsite.com
+                        {user?.email || 'admin@blogsite.com'}
                       </p>
                     </div>
                   </DropdownMenuLabel>
@@ -283,6 +365,63 @@ const handleLogout = async () => {
           </div>
         </main>
       </div>
+
+      {/* Notifications Dialog */}
+      <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Notifications</DialogTitle>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+                  Mark all as read
+                </Button>
+              )}
+            </div>
+            <DialogDescription>
+              Stay updated with your blog activities
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                  notification.read 
+                    ? "bg-muted/50 border-muted" 
+                    : "bg-background border-border hover:bg-muted/50"
+                )}
+                onClick={() => markNotificationAsRead(notification.id)}
+              >
+                <div className="flex-shrink-0 mt-1">
+                  {getNotificationIcon(notification.type)}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      !notification.read && "font-semibold"
+                    )}>
+                      {notification.title}
+                    </p>
+                    {!notification.read && (
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {notification.message}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {notification.time}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
