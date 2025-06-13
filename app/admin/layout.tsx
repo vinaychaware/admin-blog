@@ -32,6 +32,7 @@ import {
   Upload,
   LogOut,
   User,
+  Edit,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -49,6 +50,18 @@ const navigation = [
     icon: FileText,
     current: false,
   },
+  {
+    name: 'Edit',
+    href: '/admin/profile/edit',
+    icon: Edit,
+    current: false,
+  },
+  // {
+  //   name: 'Write',
+  //   href: '/admin/write',
+  //   icon: Edit,
+  //   current: false,
+  // },
   // {
   //   name: 'Analytics',
   //   href: '/admin/analytics',
@@ -61,12 +74,12 @@ const navigation = [
     icon: Users,
     current: false,
   },
-  {
-    name: 'Categories',
-    href: '/admin/categories',
-    icon: Tags,
-    current: false,
-  },
+  // {
+  //   name: 'Edit',
+  //   href: '/admin/categories',
+  //   icon: Edit,
+  //   current: false,
+  // },
   // {
   //   name: 'Media',
   //   href: '/admin/media',
@@ -77,6 +90,12 @@ const navigation = [
     name: 'Comments',
     href: '/admin/comments',
     icon: MessageSquare,
+    current: false,
+  },
+  {
+    name: 'Profile',
+    href: '/admin/profile',
+    icon: User,
     current: false,
   },
   {
@@ -100,7 +119,7 @@ const handleLogout = async () => {
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   
     router.push('/login');
-  };
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -239,19 +258,22 @@ const handleLogout = async () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Button onClick={handleLogout} className="mt-4 bg-red-600 text-white px-4 py-2 rounded">
-        Logout
-      </Button>
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
