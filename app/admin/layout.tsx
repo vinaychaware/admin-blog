@@ -50,24 +50,19 @@ const navigation = [
     icon: FileText,
     current: false,
   },
-  {
-    name: 'Edit',
-    href: '/admin/profile/edit',
-    icon: Edit,
-    current: false,
-  },
-  // {
-  //   name: 'Write',
-  //   href: '/admin/write',
-  //   icon: Edit,
-  //   current: false,
-  // },
-  // {
-  //   name: 'Analytics',
-  //   href: '/admin/analytics',
-  //   icon: BarChart3,
-  //   current: false,
-  // },
+  
+{
+  name: 'Write',
+  href: '/admin/write',
+  icon: Edit,
+  current: false,
+},
+// {
+//   name: 'Analytics',
+//   href: '/admin/analytics',
+//   icon: BarChart3,
+//   current: false,
+// },
   {
     name: 'Users',
     href: '/admin/users',
