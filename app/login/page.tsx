@@ -46,6 +46,12 @@ export default function LoginPage() {
       return;
     }
 
+    if (!email.trim() || !password.trim()) {
+      setError('Please fill in all fields');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
@@ -75,10 +81,22 @@ export default function LoginPage() {
           role: 'Admin'
         }));
 
+        // Set authentication cookie
+        document.cookie = 'token=authenticated-user; path=/; max-age=86400'; // 24 hours
+        
+        // Store user data in localStorage for demo
+        localStorage.setItem('user', JSON.stringify({
+          email: email,
+          name: 'Admin User',
+          role: 'Admin'
+        }));
+
         setTimeout(() => {
           router.push('/admin');
         }, 100);
+        }, 100);
       } else {
+        setError(data?.message || 'Invalid email or password.');
         setError(data?.message || 'Invalid email or password.');
       }
     } catch (err) {
@@ -91,6 +109,28 @@ export default function LoginPage() {
 
   const handleSocialLogin = async (provider: string) => {
     setIsLoading(true);
+    setError('');
+    
+    try {
+      // Simulate social login
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Set authentication cookie
+      document.cookie = 'token=authenticated-user; path=/; max-age=86400';
+      
+      // Store user data
+      localStorage.setItem('user', JSON.stringify({
+        email: `user@${provider}.com`,
+        name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} User`,
+        role: 'Admin'
+      }));
+
+      router.push('/admin');
+    } catch (err) {
+      setError(`Failed to sign in with ${provider}`);
+    }
+    
+    setIsLoading(false);
     setError('');
     
     try {
@@ -137,10 +177,13 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+            <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
               <Shield className="h-4 w-4" />
               <AlertDescription>
                 <strong>Demo:</strong> vinaychaware@gmail.com / 12345678
+                <strong>Demo:</strong> vinaychaware@gmail.com / 12345678
               </AlertDescription>
+            </Alert>
             </Alert>
 
             {error && (

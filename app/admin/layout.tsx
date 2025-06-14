@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +16,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +48,9 @@ import {
   LogOut,
   User,
   Edit,
+  CheckCircle,
+  AlertCircle,
+  Clock,
   CheckCircle,
   AlertCircle,
   Clock,
@@ -149,6 +160,9 @@ export default function AdminLayout({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState(mockNotifications);
   const [user, setUser] = useState<any>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState(mockNotifications);
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -161,9 +175,50 @@ export default function AdminLayout({
   }, []);
 
   const handleLogout = async () => {
+  useEffect(() => {
+    // Load user data from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = async () => {
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     localStorage.removeItem('user');
+    localStorage.removeItem('user');
     router.push('/login');
+  };
+
+  const markNotificationAsRead = (id: number) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, read: true }))
+    );
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'comment':
+        return <MessageSquare className="h-4 w-4 text-blue-500" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'user':
+        return <User className="h-4 w-4 text-purple-500" />;
+      case 'system':
+        return <Settings className="h-4 w-4 text-orange-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
   };
 
   const markNotificationAsRead = (id: number) => {
@@ -314,7 +369,18 @@ export default function AdminLayout({
                 className="relative"
                 onClick={() => setNotificationsOpen(true)}
               >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="relative"
+                onClick={() => setNotificationsOpen(true)}
+              >
                 <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge className="absolute -right-1 -top-1 h-5 w-5 p-0 text-xs flex items-center justify-center">
+                    {unreadCount}
+                  </Badge>
+                )}
                 {unreadCount > 0 && (
                   <Badge className="absolute -right-1 -top-1 h-5 w-5 p-0 text-xs flex items-center justify-center">
                     {unreadCount}
@@ -332,6 +398,9 @@ export default function AdminLayout({
                       <AvatarFallback>
                         {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'AD'}
                       </AvatarFallback>
+                      <AvatarFallback>
+                        {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'AD'}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
@@ -341,7 +410,11 @@ export default function AdminLayout({
                       <p className="text-sm font-medium leading-none">
                         {user?.name || 'Admin User'}
                       </p>
+                      <p className="text-sm font-medium leading-none">
+                        {user?.name || 'Admin User'}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email || 'admin@blogsite.com'}
                         {user?.email || 'admin@blogsite.com'}
                       </p>
                     </div>
@@ -377,6 +450,63 @@ export default function AdminLayout({
           </div>
         </main>
       </div>
+
+      {/* Notifications Dialog */}
+      <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Notifications</DialogTitle>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+                  Mark all as read
+                </Button>
+              )}
+            </div>
+            <DialogDescription>
+              Stay updated with your blog activities
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                  notification.read 
+                    ? "bg-muted/50 border-muted" 
+                    : "bg-background border-border hover:bg-muted/50"
+                )}
+                onClick={() => markNotificationAsRead(notification.id)}
+              >
+                <div className="flex-shrink-0 mt-1">
+                  {getNotificationIcon(notification.type)}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      !notification.read && "font-semibold"
+                    )}>
+                      {notification.title}
+                    </p>
+                    {!notification.read && (
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {notification.message}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {notification.time}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Notifications Dialog */}
       <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
