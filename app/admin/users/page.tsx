@@ -37,16 +37,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
   Search,
   Plus,
   MoreHorizontal,
@@ -62,7 +52,6 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [newUserOpen, setNewUserOpen] = useState(false);
 
   type User = {
     id: string;
@@ -70,7 +59,7 @@ export default function UsersPage() {
     email: string;
     image?: string;
     emailVerified?: string | null;
-    Post?: { id: string }[];
+    posts?: { id: string }[];
   };
 
   const [users, setUsers] = useState<User[]>([]);
@@ -91,6 +80,10 @@ export default function UsersPage() {
   }, []);
 
   const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      return;
+    }
+
     try {
       const res = await fetch(`/api/users/${userId}`, {
         method: "DELETE",
@@ -205,7 +198,7 @@ export default function UsersPage() {
                   <TableRow key={user.id} className="hover:bg-muted/50">
                     <TableCell>
                       <Link
-                        href={`/users/${user.id}`}
+                        href={`/admin/users/${user.id}`}
                         className="flex items-center gap-3 hover:underline"
                       >
                         <Avatar className="h-8 w-8">
@@ -240,7 +233,7 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>
                       <span className="font-mono text-sm">
-                        {user.Post?.length ?? 0}
+                        {user.posts?.length ?? 0}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -264,6 +257,12 @@ export default function UsersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/users/${user.id}`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              View Profile
+                            </Link>
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-600"

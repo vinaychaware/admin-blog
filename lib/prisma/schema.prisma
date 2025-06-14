@@ -1,12 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -15,42 +12,7 @@ datasource db {
 }
 
 model User {
-  id       String    @id @default(cuid()) @map("_id") // primary key
-  name     String?
-  email    String    @unique // only unique, NOT @id
-  image    String?
-  posts    Post[]    @relation("UserPosts")
-  comments Comment[] @relation("UserComments")
-}
-
-model Post {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  slug      String   @unique
-  title     String
-  desc      String
-  img       String
-  views     Int
-  catSlug   String
-  userEmail String
-  createdAt DateTime @default(now())
-
-  user     User      @relation("UserPosts", fields: [userEmail], references: [email])
-  comments Comment[] @relation("PostComments")
-}
-
-model Comment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  desc      String
-  createdAt DateTime @default(now())
-  userEmail String
-  postSlug  String
-
-  user User @relation("UserComments", fields: [userEmail], references: [email])
-  post Post @relation("PostComments", fields: [postSlug], references: [slug])
-}
-
-model User {
-  id            String    @id @default(cuid())
+  id            String    @id @default(cuid()) @map("_id")
   name          String?
   email         String    @unique
   emailVerified DateTime?
@@ -67,10 +29,39 @@ model User {
   role          String?   @default("Author")
   
   // Relations
-  accounts      Account[]
-  sessions      Session[]
-  Post          Post[]
-  Comment       Comment[]
+  posts         Post[]    @relation("UserPosts")
+  comments      Comment[] @relation("UserComments")
   
   @@map("users")
+}
+
+model Post {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug      String   @unique
+  title     String
+  desc      String
+  img       String?
+  views     Int      @default(0)
+  catSlug   String?
+  userEmail String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation("UserPosts", fields: [userEmail], references: [email])
+  comments Comment[] @relation("PostComments")
+  
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  desc      String
+  createdAt DateTime @default(now())
+  userEmail String
+  postSlug  String
+
+  user User @relation("UserComments", fields: [userEmail], references: [email])
+  post Post @relation("PostComments", fields: [postSlug], references: [slug])
+  
+  @@map("comments")
 }

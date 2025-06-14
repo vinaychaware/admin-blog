@@ -58,23 +58,19 @@ type UserProfile = {
   posts?: Array<{
     id: string;
     title: string;
-    status: string;
+    slug: string;
     views: number;
-    comments: number;
+    comments: any[];
     createdAt: string;
   }>;
   comments?: Array<{
     id: string;
-    content: string;
-    postTitle: string;
+    desc: string;
+    post: {
+      title: string;
+    };
     createdAt: string;
   }>;
-  stats?: {
-    totalPosts: number;
-    totalViews: number;
-    totalComments: number;
-    totalLikes: number;
-  };
 };
 
 export default function UserProfilePage() {
@@ -129,26 +125,22 @@ export default function UserProfilePage() {
           website: userData.website || '',
           twitter: userData.twitter || '',
           linkedin: userData.linkedin || '',
-          posts: userData.Post?.map((post: any) => ({
+          posts: userData.posts?.map((post: any) => ({
             id: post.id,
             title: post.title || 'Untitled',
-            status: post.published ? 'Published' : 'Draft',
+            slug: post.slug || '',
             views: post.views || 0,
-            comments: post.comments?.length || 0,
+            comments: post.comments || [],
             createdAt: post.createdAt || new Date().toISOString(),
           })) || [],
-          comments: userData.Comment?.map((comment: any) => ({
+          comments: userData.comments?.map((comment: any) => ({
             id: comment.id,
-            content: comment.content || '',
-            postTitle: comment.post?.title || 'Unknown Post',
+            desc: comment.desc || '',
+            post: {
+              title: comment.post?.title || 'Unknown Post',
+            },
             createdAt: comment.createdAt || new Date().toISOString(),
           })) || [],
-          stats: {
-            totalPosts: userData.Post?.length || 0,
-            totalViews: userData.Post?.reduce((sum: number, post: any) => sum + (post.views || 0), 0) || 0,
-            totalComments: userData.Comment?.length || 0,
-            totalLikes: userData.Post?.reduce((sum: number, post: any) => sum + (post.likes || 0), 0) || 0,
-          }
         };
         
         setUser(transformedUser);
@@ -188,8 +180,6 @@ export default function UserProfilePage() {
         throw new Error('Failed to update user');
       }
       
-      const updatedData = await response.json();
-      
       setUser({
         ...user,
         ...editForm,
@@ -202,7 +192,6 @@ export default function UserProfilePage() {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       console.error('Error updating user:', err);
-      // You could add error handling here
     } finally {
       setIsSaving(false);
     }
@@ -277,7 +266,7 @@ export default function UserProfilePage() {
         <div className="text-center space-y-4">
           <h2 className="text-2xl font-bold text-gray-900">User Not Found</h2>
           <p className="text-gray-600">{error || 'The requested user could not be found.'}</p>
-          <Link href="/users">
+          <Link href="/admin/users">
             <Button>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Users
@@ -293,7 +282,7 @@ export default function UserProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/users">
+          <Link href="/admin/users">
             <Button variant="outline" size="sm">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Users
@@ -563,27 +552,27 @@ export default function UserProfilePage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-2xl font-bold">
                     <FileText className="h-5 w-5 text-muted-foreground" />
-                    {user.stats?.totalPosts || 0}
+                    {user.posts?.length || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">Posts</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-2xl font-bold">
                     <Eye className="h-5 w-5 text-muted-foreground" />
-                    {(user.stats?.totalViews || 0).toLocaleString()}
+                    {(user.posts?.reduce((sum, post) => sum + post.views, 0) || 0).toLocaleString()}
                   </div>
                   <p className="text-xs text-muted-foreground">Views</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-2xl font-bold">
                     <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                    {user.stats?.totalComments || 0}
+                    {user.comments?.length || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">Comments</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-2xl font-bold">
-                    ❤️ {user.stats?.totalLikes || 0}
+                    ❤️ {user.posts?.reduce((sum, post) => sum + post.comments.length, 0) || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">Likes</p>
                 </div>
@@ -603,8 +592,8 @@ export default function UserProfilePage() {
                     <div key={post.id} className="space-y-2 p-3 border rounded-lg">
                       <h4 className="font-medium text-sm line-clamp-2">{post.title}</h4>
                       <div className="flex items-center justify-between">
-                        <Badge className={getStatusColor(post.status)}>
-                          {post.status}
+                        <Badge className="bg-green-100 text-green-800">
+                          Published
                         </Badge>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Eye className="h-3 w-3" />
@@ -637,9 +626,9 @@ export default function UserProfilePage() {
                 <>
                   {user.comments.slice(0, 2).map((comment) => (
                     <div key={comment.id} className="space-y-2 p-3 border rounded-lg">
-                      <p className="text-sm line-clamp-2">{comment.content}</p>
+                      <p className="text-sm line-clamp-2">{comment.desc}</p>
                       <div className="text-xs text-muted-foreground">
-                        on &quot;{comment.postTitle}&quot;
+                        on "{comment.post.title}"
                       </div>
                     </div>
                   ))}

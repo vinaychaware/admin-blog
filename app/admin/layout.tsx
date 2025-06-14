@@ -31,22 +31,15 @@ import {
   Search,
   Menu,
   X,
-  BarChart3,
-  Tags,
-  Image,
   MessageSquare,
-  Shield,
-  Upload,
   LogOut,
   User,
-  Edit,
   CheckCircle,
   AlertCircle,
   Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { write } from 'node:fs';
 
 const navigation = [
   {
@@ -61,47 +54,18 @@ const navigation = [
     icon: FileText,
     current: false,
   },
-
-  // {
-  //   name: 'Edit',
-  //   href: '/admin/profile/edit',
-  //   icon: Edit,
-  //   current: false,
-  // },
- 
   {
     name: 'Users',
     href: '/admin/users',
     icon: Users,
     current: false,
   },
-   
   {
     name: 'Comments',
     href: '/admin/comments',
     icon: MessageSquare,
     current: false,
   },
-  // {
-  //   name: 'Profile',
-  //   href: '/admin/profile',
-  //   icon: User,
-  //   current: false,
-  // },
-
-//  {
-//     name: 'Write',
-//     href: '/admin/write',
-//     icon: Edit,
-//     current: false,
-//   },
-
-  // {
-  //   name: 'Settings',
-  //   href: '/admin/settings',
-  //   icon: Settings,
-  //   current: false,
-  // },
 ];
 
 // Mock notifications data
@@ -161,20 +125,10 @@ export default function AdminLayout({
   }, []);
 
   const handleLogout = async () => {
-  useEffect(() => {
-    // Load user data from localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
-
-  const handleLogout = async () => {
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     localStorage.removeItem('user');
     router.push('/login');
   };
-
 
   const markNotificationAsRead = (id: number) => {
     setNotifications(prev => 
@@ -342,9 +296,6 @@ export default function AdminLayout({
                       <AvatarFallback>
                         {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'AD'}
                       </AvatarFallback>
-                      <AvatarFallback>
-                        {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'AD'}
-                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
@@ -354,11 +305,7 @@ export default function AdminLayout({
                       <p className="text-sm font-medium leading-none">
                         {user?.name || 'Admin User'}
                       </p>
-                      <p className="text-sm font-medium leading-none">
-                        {user?.name || 'Admin User'}
-                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email || 'admin@blogsite.com'}
                         {user?.email || 'admin@blogsite.com'}
                       </p>
                     </div>
@@ -395,7 +342,6 @@ export default function AdminLayout({
         </main>
       </div>
 
-      {/* Notifications Dialog */}
       {/* Notifications Dialog */}
       <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
         <DialogContent className="max-w-md">
