@@ -9,12 +9,30 @@ export async function GET(
   try {
     const { id } = params;
 
+    if (!id) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
         posts: {
           include: {
-            comments: true,
+            comments: {
+              select: {
+                id: true,
+                desc: true,
+                createdAt: true,
+              }
+            },
+            _count: {
+              select: {
+                comments: true,
+              }
+            }
           },
           orderBy: {
             createdAt: 'desc'
@@ -24,7 +42,8 @@ export async function GET(
           include: {
             post: {
               select: {
-                title: true
+                title: true,
+                slug: true,
               }
             }
           },
@@ -32,6 +51,12 @@ export async function GET(
             createdAt: 'desc'
           }
         },
+        _count: {
+          select: {
+            posts: true,
+            comments: true,
+          }
+        }
       }
     });
 
@@ -43,10 +68,10 @@ export async function GET(
     }
 
     return NextResponse.json(user);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching user:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
@@ -61,14 +86,28 @@ export async function PATCH(
     const { id } = params;
     const body = await request.json();
 
+    if (!id) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
     // Filter only allowed fields for update
-    const allowedFields = ['name', 'bio', 'location', 'website', 'twitter', 'linkedin', 'image'];
+    const allowedFields = ['name', 'bio', 'location', 'website', 'twitter', 'linkedin', 'image', 'role'];
     const updateData: any = {};
 
     for (const field of allowedFields) {
-      if (field in body) {
+      if (field in body && body[field] !== undefined) {
         updateData[field] = body[field];
       }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
     }
 
     const updatedUser = await prisma.user.update({
@@ -77,7 +116,18 @@ export async function PATCH(
       include: {
         posts: {
           include: {
-            comments: true,
+            comments: {
+              select: {
+                id: true,
+                desc: true,
+                createdAt: true,
+              }
+            },
+            _count: {
+              select: {
+                comments: true,
+              }
+            }
           },
           orderBy: {
             createdAt: 'desc'
@@ -87,7 +137,8 @@ export async function PATCH(
           include: {
             post: {
               select: {
-                title: true
+                title: true,
+                slug: true,
               }
             }
           },
@@ -95,14 +146,20 @@ export async function PATCH(
             createdAt: 'desc'
           }
         },
+        _count: {
+          select: {
+            posts: true,
+            comments: true,
+          }
+        }
       }
     });
 
     return NextResponse.json(updatedUser);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating user:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
@@ -115,6 +172,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = params;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
 
     // First check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -134,10 +198,10 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: 'User deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting user:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }

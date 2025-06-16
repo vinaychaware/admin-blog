@@ -21,56 +21,74 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   User,
   Mail,
   Calendar,
   Edit,
   Save,
-  Upload,
   Camera,
   Shield,
   FileText,
   MessageSquare,
   Eye,
-  Settings,
   CheckCircle,
   AlertCircle,
   Clock,
   ArrowLeft,
+  Loader2,
+  MapPin,
+  Globe,
+  Twitter,
+  Linkedin,
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Define the User type
+// Define the User type based on our API response
 type UserProfile = {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
   emailVerified?: string | null;
-  image?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  role?: string;
-  bio?: string;
-  location?: string;
-  website?: string;
-  twitter?: string;
-  linkedin?: string;
+  image?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  role?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  website?: string | null;
+  twitter?: string | null;
+  linkedin?: string | null;
   posts?: Array<{
     id: string;
     title: string;
-    slug: string;
+    slug?: string;
     views: number;
     comments: any[];
     createdAt: string;
+    _count?: {
+      comments: number;
+    };
   }>;
   comments?: Array<{
     id: string;
     desc: string;
     post: {
       title: string;
+      slug?: string;
     };
     createdAt: string;
   }>;
+  _count?: {
+    posts: number;
+    comments: number;
+  };
 };
 
 export default function UserProfilePage() {
@@ -89,6 +107,7 @@ export default function UserProfilePage() {
     website: '',
     twitter: '',
     linkedin: '',
+    role: '',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -102,58 +121,33 @@ export default function UserProfilePage() {
       
       try {
         setLoading(true);
-        const response = await fetch(`/api/users/${userId}`);
+        setError(null);
+        
+        const response = await fetch(`/api/users/${userId}`, {
+          cache: 'no-store',
+        });
         
         if (!response.ok) {
-          throw new Error('User not found');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'User not found');
         }
         
         const userData = await response.json();
+        setUser(userData);
         
-        // Transform API data to match profile structure
-        const transformedUser: UserProfile = {
-          id: userData.id,
+        // Initialize edit form
+        setEditForm({
           name: userData.name || '',
-          email: userData.email,
-          emailVerified: userData.emailVerified,
-          image: userData.image,
-          createdAt: userData.createdAt || new Date().toISOString(),
-          updatedAt: userData.updatedAt || new Date().toISOString(),
-          role: userData.role || 'Author',
           bio: userData.bio || '',
           location: userData.location || '',
           website: userData.website || '',
           twitter: userData.twitter || '',
           linkedin: userData.linkedin || '',
-          posts: userData.posts?.map((post: any) => ({
-            id: post.id,
-            title: post.title || 'Untitled',
-            slug: post.slug || '',
-            views: post.views || 0,
-            comments: post.comments || [],
-            createdAt: post.createdAt || new Date().toISOString(),
-          })) || [],
-          comments: userData.comments?.map((comment: any) => ({
-            id: comment.id,
-            desc: comment.desc || '',
-            post: {
-              title: comment.post?.title || 'Unknown Post',
-            },
-            createdAt: comment.createdAt || new Date().toISOString(),
-          })) || [],
-        };
-        
-        setUser(transformedUser);
-        setEditForm({
-          name: transformedUser.name || '',
-          bio: transformedUser.bio || '',
-          location: transformedUser.location || '',
-          website: transformedUser.website || '',
-          twitter: transformedUser.twitter || '',
-          linkedin: transformedUser.linkedin || '',
+          role: userData.role || 'Author',
         });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load user');
+      } catch (err: any) {
+        console.error('Error fetching user:', err);
+        setError(err.message || 'Failed to load user');
       } finally {
         setLoading(false);
       }
@@ -177,21 +171,20 @@ export default function UserProfilePage() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to update user');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update user');
       }
       
-      setUser({
-        ...user,
-        ...editForm,
-        updatedAt: new Date().toISOString(),
-      });
+      const updatedUser = await response.json();
+      setUser(updatedUser);
       
       setIsEditing(false);
       setSaveSuccess(true);
       
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating user:', err);
+      alert(`Failed to update user: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -207,6 +200,7 @@ export default function UserProfilePage() {
       website: user.website || '',
       twitter: user.twitter || '',
       linkedin: user.linkedin || '',
+      role: user.role || 'Author',
     });
     setIsEditing(false);
   };
@@ -224,16 +218,14 @@ export default function UserProfilePage() {
       });
       
       if (response.ok) {
-        setUser({
-          ...user,
-          image: newImageUrl,
-          updatedAt: new Date().toISOString(),
-        });
+        const updatedUser = await response.json();
+        setUser(updatedUser);
         setNewImageUrl('');
         setImageDialogOpen(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating image:', err);
+      alert(`Failed to update image: ${err.message}`);
     }
   };
 
@@ -245,16 +237,19 @@ export default function UserProfilePage() {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    return status === 'Published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+  const getInitials = (name: string | null, email: string) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    return email.slice(0, 2).toUpperCase();
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-          <p className="mt-4">Loading user profile...</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading user profile...</span>
         </div>
       </div>
     );
@@ -262,10 +257,13 @@ export default function UserProfilePage() {
 
   if (error || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold text-gray-900">User Not Found</h2>
-          <p className="text-gray-600">{error || 'The requested user could not be found.'}</p>
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Not Found</h2>
+            <p className="text-gray-600 dark:text-gray-400">{error || 'The requested user could not be found.'}</p>
+          </div>
           <Link href="/admin/users">
             <Button>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -338,9 +336,9 @@ export default function UserProfilePage() {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={user.image || ''} alt={user.name || 'User'} />
+                    <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
                     <AvatarFallback className="text-lg">
-                      {user.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                      {getInitials(user.name, user.email)}
                     </AvatarFallback>
                   </Avatar>
                   <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
@@ -391,15 +389,15 @@ export default function UserProfilePage() {
                   </Dialog>
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-xl font-semibold">{user.name}</h3>
+                  <h3 className="text-xl font-semibold">{user.name || 'Unnamed User'}</h3>
                   <p className="text-muted-foreground">{user.email}</p>
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-blue-100 text-blue-800">
+                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                       <Shield className="mr-1 h-3 w-3" />
-                      {user.role}
+                      {user.role || 'Author'}
                     </Badge>
                     {user.emailVerified && (
-                      <Badge className="bg-green-100 text-green-800">
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                         <CheckCircle className="mr-1 h-3 w-3" />
                         Verified
                       </Badge>
@@ -427,7 +425,28 @@ export default function UserProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="role">Role</Label>
+                  {isEditing ? (
+                    <Select value={editForm.role} onValueChange={(value) => setEditForm({ ...editForm, role: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="Editor">Editor</SelectItem>
+                        <SelectItem value="Author">Author</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm py-2">{user.role || 'Author'}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">
+                    <MapPin className="inline h-4 w-4 mr-1" />
+                    Location
+                  </Label>
                   {isEditing ? (
                     <Input
                       id="location"
@@ -441,7 +460,10 @@ export default function UserProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
+                  <Label htmlFor="website">
+                    <Globe className="inline h-4 w-4 mr-1" />
+                    Website
+                  </Label>
                   {isEditing ? (
                     <Input
                       id="website"
@@ -463,7 +485,10 @@ export default function UserProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="twitter">Twitter</Label>
+                  <Label htmlFor="twitter">
+                    <Twitter className="inline h-4 w-4 mr-1" />
+                    Twitter
+                  </Label>
                   {isEditing ? (
                     <Input
                       id="twitter"
@@ -473,6 +498,23 @@ export default function UserProfilePage() {
                     />
                   ) : (
                     <p className="text-sm py-2">{user.twitter || 'Not provided'}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin">
+                    <Linkedin className="inline h-4 w-4 mr-1" />
+                    LinkedIn
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="linkedin"
+                      value={editForm.linkedin}
+                      onChange={(e) => setEditForm({ ...editForm, linkedin: e.target.value })}
+                      placeholder="linkedin.com/in/username"
+                    />
+                  ) : (
+                    <p className="text-sm py-2">{user.linkedin || 'Not provided'}</p>
                   )}
                 </div>
               </div>
@@ -509,12 +551,12 @@ export default function UserProfilePage() {
                   <Label>Email Status</Label>
                   <div className="flex items-center gap-2">
                     {user.emailVerified ? (
-                      <Badge className="bg-green-100 text-green-800">
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                         <CheckCircle className="mr-1 h-3 w-3" />
                         Verified
                       </Badge>
                     ) : (
-                      <Badge className="bg-yellow-100 text-yellow-800">
+                      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                         <AlertCircle className="mr-1 h-3 w-3" />
                         Unverified
                       </Badge>
@@ -525,14 +567,14 @@ export default function UserProfilePage() {
                   <Label>Member Since</Label>
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    {formatDate(user.createdAt || '')}
+                    {formatDate(user.createdAt)}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Last Updated</Label>
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    {formatDate(user.updatedAt || '')}
+                    {formatDate(user.updatedAt)}
                   </div>
                 </div>
               </div>
@@ -552,7 +594,7 @@ export default function UserProfilePage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-2xl font-bold">
                     <FileText className="h-5 w-5 text-muted-foreground" />
-                    {user.posts?.length || 0}
+                    {user._count?.posts || user.posts?.length || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">Posts</p>
                 </div>
@@ -566,13 +608,13 @@ export default function UserProfilePage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-2xl font-bold">
                     <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                    {user.comments?.length || 0}
+                    {user._count?.comments || user.comments?.length || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">Comments</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-2xl font-bold">
-                    ❤️ {user.posts?.reduce((sum, post) => sum + post.comments.length, 0) || 0}
+                    ❤️ {user.posts?.reduce((sum, post) => sum + (post._count?.comments || post.comments?.length || 0), 0) || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">Likes</p>
                 </div>
@@ -592,7 +634,7 @@ export default function UserProfilePage() {
                     <div key={post.id} className="space-y-2 p-3 border rounded-lg">
                       <h4 className="font-medium text-sm line-clamp-2">{post.title}</h4>
                       <div className="flex items-center justify-between">
-                        <Badge className="bg-green-100 text-green-800">
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                           Published
                         </Badge>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -38,46 +38,78 @@ import {
 } from "@/components/ui/select";
 import {
   Search,
-  Plus,
   MoreHorizontal,
   Edit,
   Trash2,
   Shield,
-  Mail,
   Calendar,
+  Loader2,
+  AlertCircle,
+  Users,
   UserPlus,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  image?: string | null;
+  emailVerified?: string | null;
+  role?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  posts?: { id: string }[];
+  comments?: { id: string }[];
+  _count?: {
+    posts: number;
+    comments: number;
+  };
+};
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-
-  type User = {
-    id: string;
-    name: string;
-    email: string;
-    image?: string;
-    emailVerified?: string | null;
-    posts?: { id: string }[];
-  };
-
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("/api/users");
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setUsers(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch users:", err);
-      }
-    };
     fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const res = await fetch("/api/users", {
+        cache: 'no-store',
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to fetch users');
+      }
+      
+      const data = await res.json();
+      
+      if (Array.isArray(data)) {
+        setUsers(data);
+      } else {
+        console.error("Expected array, got:", data);
+        setUsers([]);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch users:", err);
+      setError(err.message || "Failed to load users");
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
@@ -85,6 +117,8 @@ export default function UsersPage() {
     }
 
     try {
+      setDeleteLoading(userId);
+      
       const res = await fetch(`/api/users/${userId}`, {
         method: "DELETE",
       });
@@ -94,51 +128,93 @@ export default function UsersPage() {
         throw new Error(data.error || "Failed to delete user");
       }
 
-      console.log("User deleted");
+      // Remove user from local state
       setUsers((prev) => prev.filter((user) => user.id !== userId));
-    } catch (err) {
+      
+    } catch (err: any) {
       console.error("Error deleting user:", err);
+      alert(`Failed to delete user: ${err.message}`);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
-  const filteredUsers = Array.isArray(users)
-    ? users.filter((user) => {
-        const matchesSearch =
-          (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesSearch;
-      })
-    : [];
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRole = roleFilter === "all" || (user.role || "").toLowerCase() === roleFilter.toLowerCase();
+    
+    const matchesStatus = statusFilter === "all" || 
+      (statusFilter === "active" && user.emailVerified) ||
+      (statusFilter === "inactive" && !user.emailVerified);
 
-  const getRoleColor = (role: string) => {
-    switch (role.toLowerCase()) {
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  const getRoleColor = (role: string | null | undefined) => {
+    switch ((role || "").toLowerCase()) {
       case "admin":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "editor":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "author":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
 
-  const getStatusColor = (status: string) => {
-    return status === "Active"
-      ? "bg-green-100 text-green-800"
-      : "bg-gray-100 text-gray-800";
+  const getStatusColor = (verified: string | null | undefined) => {
+    return verified
+      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading users...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Users className="h-8 w-8" />
+            Users
+          </h1>
           <p className="text-muted-foreground">
             Manage user accounts, roles, and permissions.
           </p>
         </div>
+        <Button>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Add User
+        </Button>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -152,7 +228,7 @@ export default function UsersPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search users..."
+                placeholder="Search users by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -189,6 +265,7 @@ export default function UsersPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Posts</TableHead>
+                  <TableHead>Comments</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -202,50 +279,47 @@ export default function UsersPage() {
                         className="flex items-center gap-3 hover:underline"
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.image} alt={user.name} />
+                          <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
                           <AvatarFallback>
-                            {(user.name || "")
+                            {(user.name || user.email)
                               .split(" ")
                               .map((n) => n[0])
-                              .join("")}
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{user.name}</p>
+                          <p className="font-medium">{user.name || "Unnamed User"}</p>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getRoleColor("author")}>
+                      <Badge className={getRoleColor(user.role)}>
                         <Shield className="mr-1 h-3 w-3" />
-                        Author
+                        {user.role || "Author"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        className={getStatusColor(
-                          user.emailVerified ? "Active" : "Inactive"
-                        )}
-                      >
+                      <Badge className={getStatusColor(user.emailVerified)}>
                         {user.emailVerified ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <span className="font-mono text-sm">
-                        {user.posts?.length ?? 0}
+                        {user._count?.posts || user.posts?.length || 0}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-sm">
+                        {user._count?.comments || user.comments?.length || 0}
                       </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {user.emailVerified
-                          ? new Date(user.emailVerified).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })
-                          : "—"}
+                        {formatDate(user.createdAt)}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -267,8 +341,13 @@ export default function UsersPage() {
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteUser(user.id)}
+                            disabled={deleteLoading === user.id}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            {deleteLoading === user.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="mr-2 h-4 w-4" />
+                            )}
                             Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -280,13 +359,24 @@ export default function UsersPage() {
             </Table>
           </div>
 
-          {filteredUsers.length === 0 && (
+          {filteredUsers.length === 0 && !loading && (
             <div className="text-center py-12 space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">No users found</h3>
-              <p className="text-gray-500 mt-1">
-                All users have been removed or filtered out.
-              </p>
-              <Button onClick={() => window.location.reload()}>Reload</Button>
+              <Users className="h-12 w-12 text-muted-foreground mx-auto" />
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  No users found
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  {searchTerm || roleFilter !== "all" || statusFilter !== "all"
+                    ? "Try adjusting your search or filter criteria."
+                    : "No users have been added yet."}
+                </p>
+              </div>
+              {!searchTerm && roleFilter === "all" && statusFilter === "all" && (
+                <Button onClick={fetchUsers}>
+                  Refresh
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid()) @map("_id")
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Additional profile fields
+  bio           String?
+  location      String?
+  website       String?
+  twitter       String?
+  linkedin      String?
+  role          String?   @default("Author")
+  
+  // Relations
+  posts         Post[]    @relation("UserPosts")
+  comments      Comment[] @relation("UserComments")
+  
+  @@map("users")
+}
+
+model Post {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug      String   @unique
+  title     String
+  desc      String
+  img       String?
+  views     Int      @default(0)
+  catSlug   String?
+  userEmail String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation("UserPosts", fields: [userEmail], references: [email])
+  comments Comment[] @relation("PostComments")
+  
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  desc      String
+  createdAt DateTime @default(now())
+  userEmail String
+  postSlug  String
+
+  user User @relation("UserComments", fields: [userEmail], references: [email])
+  post Post @relation("PostComments", fields: [postSlug], references: [slug])
+  
+  @@map("comments")
+}
