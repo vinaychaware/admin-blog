@@ -40,6 +40,10 @@ export async function GET(
         { error: 'User not found' },
         { status: 404 }
       );
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(user);
@@ -124,4 +128,5 @@ export async function DELETE(
     console.error("❌ Failed to delete user:", error);
     return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
   }
+}
 }
