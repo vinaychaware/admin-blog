@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { AlarmClock, MoreHorizontalIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,34 +37,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Search,
-  Plus,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Shield,
-  Mail,
-  Calendar,
-  UserPlus,
-} from "lucide-react";
+
+import { Search, Trash2, Shield, Calendar, Ellipsis } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [newUserOpen, setNewUserOpen] = useState(false);
-
   type User = {
     id: string;
     name: string;
@@ -80,31 +62,43 @@ export default function UsersPage() {
       try {
         const res = await fetch("/api/users");
         const data = await res.json();
+        console.log("Fetched users:", data); // 👈 Add this
         if (Array.isArray(data)) {
           setUsers(data);
+        } else {
+          console.error("Unexpected data:", data);
         }
       } catch (err) {
         console.error("Failed to fetch users:", err);
       }
     };
+
     fetchUsers();
   }, []);
 
   const handleDeleteUser = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: "DELETE",
-      });
+    if (
+      confirm(
+        "Are you sure you want to delete this user? This action cannot be undone."
+      )
+    ) {
+      try {
+        const res = await fetch(`/api/users/${userId}`, {
+          method: "DELETE",
+        });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete user");
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to delete user");
+        }
+
+        alert("User has been successfully deleted ✅");
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
+        // Optionally update UI or refetch user list here
+      } catch (err) {
+        console.error("Error deleting user:", err);
+        alert("Failed to delete user ❌");
       }
-
-      console.log("User deleted");
-      setUsers((prev) => prev.filter((user) => user.id !== userId));
-    } catch (err) {
-      console.error("Error deleting user:", err);
     }
   };
 
@@ -151,7 +145,8 @@ export default function UsersPage() {
         <CardHeader>
           <CardTitle>User Management</CardTitle>
           <CardDescription>
-            View and manage all user accounts, their roles, and access permissions.
+            View and manage all user accounts, their roles, and access
+            permissions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -204,24 +199,30 @@ export default function UsersPage() {
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id} className="hover:bg-muted/50">
                     <TableCell>
-                      <Link
-                        href={`/users/${user.id}`}
-                        className="flex items-center gap-3 hover:underline"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.image} alt={user.name} />
-                          <AvatarFallback>
-                            {(user.name || "")
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                      </Link>
+                      <>
+                        <Link
+                          href={`/admin/users/${user.id}`}
+                          className="flex items-center gap-3 hover:underline"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.image} alt={user.name} />
+                              <AvatarFallback>
+                                {(user.name || "")
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{user.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {user.email}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      </>
                     </TableCell>
                     <TableCell>
                       <Badge className={getRoleColor("author")}>
@@ -247,19 +248,25 @@ export default function UsersPage() {
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         {user.emailVerified
-                          ? new Date(user.emailVerified).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })
+                          ? new Date(user.emailVerified).toLocaleDateString(
+                              "en-GB",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              }
+                            )
                           : "—"}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right relative z-10 overflow-visible">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button
+                            variant="ghost"
+                            className="h-8 w-8 p-0 flex items-center justify-center border"
+                          >
+                            <MoreHorizontalIcon className="h-4 w-4 text-black" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -283,7 +290,9 @@ export default function UsersPage() {
 
           {filteredUsers.length === 0 && (
             <div className="text-center py-12 space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">No users found</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                No users found
+              </h3>
               <p className="text-gray-500 mt-1">
                 All users have been removed or filtered out.
               </p>
@@ -292,6 +301,6 @@ export default function UsersPage() {
           )}
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>
+  );
 }

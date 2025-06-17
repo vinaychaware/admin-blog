@@ -94,9 +94,7 @@ export default function LoginPage() {
         setTimeout(() => {
           router.push('/admin');
         }, 100);
-        }, 100);
       } else {
-        setError(data?.message || 'Invalid email or password.');
         setError(data?.message || 'Invalid email or password.');
       }
     } catch (err) {
