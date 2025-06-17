@@ -31,7 +31,7 @@ export async function GET(
           orderBy: {
             createdAt: 'desc'
           }
-        },
+        }
       }
     });
 
@@ -128,5 +128,4 @@ export async function DELETE(
     console.error("❌ Failed to delete user:", error);
     return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
   }
-}
 }

@@ -5,15 +5,14 @@ export async function GET() {
   try {
     const users = await prisma.user.findMany({
       include: {
-        posts: {
+        Post: {
           select: {
             id: true,
             title: true,
             views: true,
-            createdAt: true,
           }
         },
-        comments: {
+        Comment: {
           select: {
             id: true,
             desc: true,
@@ -22,13 +21,13 @@ export async function GET() {
         },
         _count: {
           select: {
-            posts: true,
-            comments: true,
+            Post: true,
+            Comment: true,
           }
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        name: 'desc'
       }
     });
 
